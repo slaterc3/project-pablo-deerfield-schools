@@ -15,8 +15,9 @@ IMPORTANT RULES:
 - Return ONLY valid JSON, no explanation text
 
 PAGE LAYOUT:
-- OUTSIDE PAGE (first image): Contains Q1, Q2, Q3, Q4 on the right side, and Q13, Q14, Q15, Q16, Q17 on the left side. Also shows the survey ID (e.g. "L-1") in the top corner.
-- INSIDE PAGE (second image): Contains Q5, Q6, Q7, Q8, Q9 (a-f), Q10 (a-g), Q11 (a-d), Q12
+- Image 1 - FRONT (right half of outside scan): Contains survey ID label (e.g. L-1, U-4) in top corner, plus Q1, Q2, Q3, Q4.
+- Image 2 - INSIDE (full inside scan): Contains Q5, Q6, Q7, Q8, Q9 (a-f), Q10 (a-g), Q11 (a-d), Q12.
+- Image 3 - BACK (left half of next outside scan): Contains Q13, Q14, Q15, Q16, Q17. May be null for last survey in batch.
 
 CODING RULES:
 
@@ -93,9 +94,10 @@ RETURN FORMAT (strict JSON):
   "Q17": {"value": [2], "confidence": "high"}
 }"""
 
-USER_PROMPT = """Here are two pages of a single paper survey.
-Image 1 is the OUTSIDE of the survey (contains Q1-Q4 and Q13-Q17).
-Image 2 is the INSIDE of the survey (contains Q5-Q12).
+USER_PROMPT = """Here are three cropped images of a single paper survey.
+Image 1 is the FRONT (right half of outside scan) — contains survey ID and Q1-Q4.
+Image 2 is the INSIDE (full inside scan) — contains Q5-Q12.
+Image 3 is the BACK (left half of next outside scan) — contains Q13-Q17 (may be absent).
 
 Extract all marked responses and return the JSON object as instructed.
 Remember: return ONLY the JSON, no other text."""
