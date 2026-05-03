@@ -85,9 +85,15 @@ def process_pdf(pdf_path: str, api_key: str = None) -> list[dict]:
     print(f"Found {total_pages} pages → {num_surveys} surveys to process")
     
     results = []
+    # for i in range(num_surveys):
+    #     outside_img = images[i * 2]
+    #     inside_img  = images[i * 2 + 1]
+    # cs updated 5/3/26
+    start = find_first_outside_page(images, client)
+    num_surveys = (len(images) - start) // 2
     for i in range(num_surveys):
-        outside_img = images[i * 2]
-        inside_img  = images[i * 2 + 1]
+        outside_img = images[start + i * 2]
+        inside_img  = images[start + i * 2 + 1]
         survey_num  = i + 1
 
         print(f"  Extracting survey {survey_num}/{num_surveys}...", end=" ", flush=True)
@@ -154,6 +160,28 @@ def flatten_result(result: dict) -> dict:
 
     return flat
 
+def find_first_outside_page(images: list[bytes], client: anthropic.Anthropic) -> int:
+    """
+    Scan pages until we find one with a survey ID label (L-X or U-X).
+    Returns the index of the first real outside page.
+    """
+    for i, img in enumerate(images[:6]):  # only check first 6 pages max
+        b64 = base64.standard_b64encode(img).decode("utf-8")
+        response = client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=10,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                    {"type": "text", "text": "Does this page contain a survey ID label like L-1, L-2, U-5 etc in the top corner? Reply only: yes or no"}
+                ]
+            }]
+        )
+        if "yes" in response.content[0].text.lower():
+            print(f"  First outside page found at index {i}")
+            return i
+    return 0  # fallback
 
 if __name__ == "__main__":
     # Quick test against the sample PDF
