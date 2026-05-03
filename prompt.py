@@ -12,6 +12,8 @@ IMPORTANT RULES:
 - If a question is skipped or unanswered, use null
 - For multi-select questions (Q6, Q16, Q17), return an array of selected option numbers
 - Be conservative: if you are genuinely unsure about a mark, use null and flag it
+- Pages may be scanned at a very slight angle. When reading rating scale responses, focus on which number the circle is drawn around, not just horizontal alignment with the row.
+- Only flag as low confidence if the mark is genuinely difficult to read. Clean circles and clear X marks on checkboxes should always be high confidence.
 - Return ONLY valid JSON, no explanation text
 
 PAGE LAYOUT:

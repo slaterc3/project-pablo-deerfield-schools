@@ -110,11 +110,20 @@ def process_pdf(pdf_path: str, api_key: str = None) -> list[dict]:
             result["_page_index"] = i
             result["_status"] = "ok"
 
+            # low_conf = [k for k, v in result.items()
+            #             if isinstance(v, dict) and v.get("confidence") == "low"]
+            # if low_conf:
+            #     result["_flags"] = low_conf
+            #     print(f"⚠️  flagged: {low_conf}")
+            # updated cs 5/3/26
             low_conf = [k for k, v in result.items()
-                        if isinstance(v, dict) and v.get("confidence") == "low"]
-            if low_conf:
-                result["_flags"] = low_conf
-                print(f"⚠️  flagged: {low_conf}")
+            if isinstance(v, dict) and v.get("confidence") == "low"]
+            med_conf = [k for k, v in result.items()
+                    if isinstance(v, dict) and v.get("confidence") == "medium"]
+            flags = low_conf + [f"{k}?" for k in med_conf]
+            if flags:
+                result["_flags"] = flags
+                print(f"⚠️  flagged: {flags}")
             else:
                 print("✓")
 
