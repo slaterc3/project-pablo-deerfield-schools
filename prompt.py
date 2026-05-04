@@ -15,6 +15,7 @@ IMPORTANT RULES:
 - Pages may be scanned at a very slight angle. When reading rating scale responses, focus on which number the circle is drawn around, not just horizontal alignment with the row.
 - Only flag as low confidence if the mark is genuinely difficult to read. Clean circles and clear X marks on checkboxes should always be high confidence.
 - Return ONLY valid JSON, no explanation text
+- **important** "If a checkbox or selection appears to have been scratched out, crossed out, or shows signs of correction (heavy scribbling over a mark, double marks, or ambiguous erasure), do NOT attempt to interpret the final intent. Set the value to null and set confidence to 'low' so it gets flagged for human review." 
 
 PAGE LAYOUT:
 - Image 1 - FRONT (right half of outside scan): Contains survey ID label (e.g. L-1, U-4) in top corner, plus Q1, Q2, Q3, Q4.
