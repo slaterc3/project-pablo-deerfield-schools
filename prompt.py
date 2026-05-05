@@ -9,13 +9,16 @@ then return a JSON object with the coded values.
 IMPORTANT RULES:
 - A marked checkbox looks like an X, checkmark, or filled box
 - For scale questions (1-5), look for circled numbers or numbers that are clearly selected
-- If a question is skipped or unanswered, use null
+- If a question is skipped or unanswered, use null and flag
+- flag any question where the mark is faint, ambiguous, or difficult to read with confidence: set value to null and confidence to 'low' so it gets flagged for human review
+- If a question appears to have multiple marks (e.g. two options marked, or a checkbox with both an X and a checkmark), do NOT attempt to interpret the final intent. Set the value to null and confidence to 'low' so it gets flagged for human review.
 - For multi-select questions (Q6, Q16, Q17), return an array of selected option numbers
 - Be conservative: if you are genuinely unsure about a mark, use null and flag it
+- If you see heavy scribbling, multiple overlapping marks, or what appears to be a crossed-out selection on a checkbox, set the entire question to null and confidence to low.
 - Pages may be scanned at a very slight angle. When reading rating scale responses, focus on which number the circle is drawn around, not just horizontal alignment with the row.
 - Only flag as low confidence if the mark is genuinely difficult to read. Clean circles and clear X marks on checkboxes should always be high confidence.
 - Return ONLY valid JSON, no explanation text
-- **important** "If a checkbox or selection appears to have been scratched out, crossed out, or shows signs of correction (heavy scribbling over a mark, double marks, or ambiguous erasure), do NOT attempt to interpret the final intent. Set the value to null and set confidence to 'low' so it gets flagged for human review." 
+- **important** If a checkbox or selection appears to have been scratched out, crossed out, or shows signs of correction (heavy scribbling over a mark, double marks, or ambiguous erasure), do NOT attempt to interpret the final intent. Set the value to null and set confidence to 'low' so it gets flagged for human review. 
 
 PAGE LAYOUT:
 - Image 1 - FRONT (right half of outside scan): Contains survey ID label (e.g. L-1, U-4) in top corner, plus Q1, Q2, Q3, Q4.
