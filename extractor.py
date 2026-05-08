@@ -20,6 +20,7 @@ import base64
 import json
 import os
 from prompt import SYSTEM_PROMPT, USER_PROMPT
+from models import SurveyResult, parse_and_validate
 
 
 def get_page_crop(doc: fitz.Document, page_num: int, half: str = "full", dpi: int = 150) -> bytes:
@@ -40,8 +41,8 @@ def get_page_crop(doc: fitz.Document, page_num: int, half: str = "full", dpi: in
     return pix.tobytes("png")
 
 
-def extract_survey(front_img, inside_img, back_img, client):
-    """Send three cropped images to Claude vision and return extracted JSON."""
+def extract_survey(front_img, inside_img, back_img, client) -> dict:
+    """Send three cropped images to Claude vision and return raw JSON dict."""
     front_b64  = base64.standard_b64encode(front_img).decode("utf-8")
     inside_b64 = base64.standard_b64encode(inside_img).decode("utf-8")
 
@@ -106,28 +107,53 @@ def process_pdf(pdf_path: str, api_key: str = None) -> list[dict]:
         print(f"  Extracting survey {survey_num}/{num_surveys}{suffix}...", end=" ", flush=True)
 
         try:
-            result = extract_survey(front_img, inside_img, back_img, client)
-            result["_page_index"] = i
-            result["_status"] = "ok"
+            # 1. Get raw JSON from Claude
+            raw_dict = extract_survey(front_img, inside_img, back_img, client)
 
-            low_conf = [k for k, v in result.items()
-                        if isinstance(v, dict) and v.get("confidence") == "low"]
-            if low_conf:
-                result["_flags"] = low_conf
-                print(f"⚠️  flagged: {low_conf}")
+            # 2. Validate with Pydantic
+            survey, errors = parse_and_validate(raw_dict)
+
+            if errors:
+                print(f"VALIDATION ERROR: {errors}")
+                results.append({
+                    "survey_id": raw_dict.get("survey_id", f"ERROR-{survey_num}"),
+                    "likely_voter": raw_dict.get("likely_voter", ""),
+                    "_status": "validation_error",
+                    "_flags": str(errors),
+                })
+                continue
+
+            # 3. Get confidence flags from validated model
+            flags = survey.get_flags()
+
+            # 4. Auto-flag suspicious multi-select responses
+            flat = survey.to_flat_dict()
+            multi_thresholds = {"Q6": 2, "Q16": 3, "Q17": 3}
+            for q, threshold in multi_thresholds.items():
+                val = flat.get(q)
+                if val and len(str(val).split(",")) >= threshold:
+                    if q not in flags and f"{q}?" not in flags:
+                        flags.append(f"{q}?")
+
+            # 5. Build output dict
+            flat["_status"] = "ok"
+            flat["_flags"]  = ",".join(flags) if flags else ""
+
+            if flags:
+                print(f"⚠️  flagged: {flags}")
             else:
                 print("✓")
 
-            results.append(result)
-            print(f"    {json.dumps(flatten_result(result))}")
+            print(f"    {json.dumps(flat)}")
+            results.append(flat)
 
         except Exception as e:
             print(f"ERROR: {e}")
             results.append({
                 "survey_id": f"ERROR-{survey_num}",
-                "_page_index": i,
+                "likely_voter": "",
                 "_status": "error",
-                "_error": str(e)
+                "_flags": str(e),
             })
 
     doc.close()
@@ -135,36 +161,11 @@ def process_pdf(pdf_path: str, api_key: str = None) -> list[dict]:
 
 
 def flatten_result(result: dict) -> dict:
-    """Flatten extracted JSON into a simple key→value dict for Excel writing."""
-    flat = {
-        "survey_id": result.get("survey_id", ""),
-        "likely_voter": result.get("likely_voter", ""),
-        "_status": result.get("_status", ""),
-        "_flags": ",".join(result.get("_flags", [])) if result.get("_flags") else "",
-    }
-
-    question_keys = [
-        "Q1","Q2","Q3","Q4","Q5","Q6","Q7","Q8",
-        "Q9a","Q9b","Q9c","Q9d","Q9e","Q9f",
-        "Q10a","Q10b","Q10c","Q10d","Q10e","Q10f","Q10g",
-        "Q11a","Q11b","Q11c","Q11d",
-        "Q12","Q13","Q14","Q15","Q16","Q17"
-    ]
-
-    for key in question_keys:
-        entry = result.get(key)
-        if entry is None:
-            flat[key] = None
-        elif isinstance(entry, dict):
-            val = entry.get("value")
-            if isinstance(val, list):
-                flat[key] = ",".join(str(v) for v in val) if val else None
-            else:
-                flat[key] = val
-        else:
-            flat[key] = entry
-
-    return flat
+    """
+    Pass-through for compatibility with writer.py.
+    Results from process_pdf are already flat dicts since Pydantic refactor.
+    """
+    return result
 
 
 if __name__ == "__main__":
@@ -173,4 +174,4 @@ if __name__ == "__main__":
     results = process_pdf(pdf)
     print("\n--- EXTRACTED RESULTS ---")
     for r in results:
-        print(json.dumps(flatten_result(r), indent=2))
+        print(json.dumps(r, indent=2))
