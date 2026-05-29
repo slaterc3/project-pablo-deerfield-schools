@@ -133,9 +133,16 @@ def process_pdf(pdf_path: str, api_key: str = None) -> list[dict]:
             for key, default in NO_RESPONSE_DEFAULTS.items():
                 if flat.get(key) is None and default is not None:
                     flat[key] = default
+            if flat.get("Q5") == 2:
+                flat["Q6"] = None
+            
 
             for key, val in flat.items():
                 if val is None and key.startswith("Q"):
+                    
+                    if key == "Q6" and flat.get("Q5") == 2:
+                        # Q6 is intentionally left null if Q5=No
+                        continue
                     if key not in flags and f"{key}?" not in flags:
                         flags.append(f"{key}?")
         
