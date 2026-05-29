@@ -201,3 +201,28 @@ EXCEL_COLUMNS = [
 # (they're header rows only) - sub-question columns carry the data
 
 SURVEY_SOURCE = "S"  # S = Snail Mail (vs Q=QR, T=Text)
+
+# Default values for unanswered questions (last valid option per question)
+# Scale questions (Q9, Q10, Q11) are left null - no meaningful default
+NO_RESPONSE_DEFAULTS = {
+    "Q1": 4,    # Nothing at all
+    "Q2": 6,    # Don't know
+    "Q3": 6,    # Don't know
+    "Q4": 5,    # Don't know
+    "Q5": 2,    # No
+    "Q6": None, # Depends on Q5
+    "Q7": 2,    # No
+    "Q8": 5,    # Don't know
+    "Q9a": None, "Q9b": None, "Q9c": None,
+    "Q9d": None, "Q9e": None, "Q9f": None,
+    "Q10a": None, "Q10b": None, "Q10c": None,
+    "Q10d": None, "Q10e": None, "Q10f": None, "Q10g": None,
+    "Q11a": None, "Q11b": None, "Q11c": None, "Q11d": None,
+    "Q12": 5,   # Don't know
+    "Q13": 5,   # Don't know
+    "Q14": 5,   # Don't know
+    "Q15": 5,   # Don't know
+    "Q16": 4,   # Prefer not to say
+    "Q17": 6,   # 75 or older
+}
+ 

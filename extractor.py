@@ -21,7 +21,7 @@ import json
 import os
 from prompt import SYSTEM_PROMPT, USER_PROMPT
 from models import SurveyResult, parse_and_validate
-
+from config import NO_RESPONSE_DEFAULTS
 
 def get_page_crop(doc: fitz.Document, page_num: int, half: str = "full", dpi: int = 150) -> bytes:
     """Render a page or half-page to PNG bytes."""
@@ -128,13 +128,17 @@ def process_pdf(pdf_path: str, api_key: str = None) -> list[dict]:
 
             # 4. Auto-flag suspicious multi-select responses
             flat = survey.to_flat_dict()
-            multi_thresholds = {"Q6": 2, "Q16": 3, "Q17": 3}
-            for q, threshold in multi_thresholds.items():
-                val = flat.get(q)
-                if val and len(str(val).split(",")) >= threshold:
-                    if q not in flags and f"{q}?" not in flags:
-                        flags.append(f"{q}?")
 
+            # Apply no-response defaults for unanswered questions
+            for key, default in NO_RESPONSE_DEFAULTS.items():
+                if flat.get(key) is None and default is not None:
+                    flat[key] = default
+
+            for key, val in flat.items():
+                if val is None and key.startswith("Q"):
+                    if key not in flags and f"{key}?" not in flags:
+                        flags.append(f"{key}?")
+        
             # 5. Build output dict
             flat["_status"] = "ok"
             flat["_flags"]  = ",".join(flags) if flags else ""
