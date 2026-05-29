@@ -213,11 +213,11 @@ NO_RESPONSE_DEFAULTS = {
     "Q6": None, # Depends on Q5
     "Q7": 2,    # No
     "Q8": 5,    # Don't know
-    "Q9a": None, "Q9b": None, "Q9c": None,
-    "Q9d": None, "Q9e": None, "Q9f": None,
-    "Q10a": None, "Q10b": None, "Q10c": None,
-    "Q10d": None, "Q10e": None, "Q10f": None, "Q10g": None,
-    "Q11a": None, "Q11b": None, "Q11c": None, "Q11d": None,
+    "Q9a": 1, "Q9b": 1, "Q9c": 1,
+    "Q9d": 1, "Q9e": 1, "Q9f": 1,
+    "Q10a": 1, "Q10b": 1, "Q10c": 1,
+    "Q10d": 1, "Q10e": 1, "Q10f": 1, "Q10g": 1,
+    "Q11a": 1, "Q11b": 1, "Q11c": 1, "Q11d": 1,
     "Q12": 5,   # Don't know
     "Q13": 5,   # Don't know
     "Q14": 5,   # Don't know
