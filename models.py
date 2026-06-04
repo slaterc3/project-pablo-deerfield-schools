@@ -86,9 +86,12 @@ class Q15Response(BaseModel):
 
 class SurveyResult(BaseModel):
     # Metadata
-    survey_id:    str
-    likely_voter: str
+    # survey_id:    str
+    # likely_voter: str
+    survey_id: Optional[str] = None
+    likely_voter: Optional[str] = None
 
+    
     # Outside front (Q1-Q4)
     Q1: Q1Response
     Q2: Q2Response
@@ -126,13 +129,21 @@ class SurveyResult(BaseModel):
     Q16: Optional[MultiResponse] = None
     Q17: Optional[MultiResponse] = None
 
+    # @field_validator('likely_voter')
+    # @classmethod
+    # def validate_voter_type(cls, v):
+    #     if v not in ('L', 'U'):
+    #         raise ValueError(f"likely_voter must be 'L' or 'U', got '{v}'")
+    #     return v
     @field_validator('likely_voter')
     @classmethod
     def validate_voter_type(cls, v):
+        if v is None:
+            return v
         if v not in ('L', 'U'):
             raise ValueError(f"likely_voter must be 'L' or 'U', got '{v}'")
         return v
-
+    
     @model_validator(mode='after')
     def validate_voter_matches_id(self):
         if self.survey_id and self.likely_voter:
