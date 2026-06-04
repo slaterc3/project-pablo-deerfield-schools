@@ -1,65 +1,72 @@
 # surveybot/writer.py
 # Takes flattened survey results and writes them to the Excel template
+# Supports per-survey-type column mappings via surveys/<type>/config.py
 
 import openpyxl
-from openpyxl.styles import PatternFill, Font
+import importlib
+from openpyxl.styles import PatternFill
 from copy import copy
 from pathlib import Path
-from config import SURVEY_SOURCE
 
-# Yellow fill for flagged cells (low confidence)
-FLAG_FILL = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+SURVEY_SOURCE = "S"
+
+FLAG_FILL  = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 ERROR_FILL = PatternFill(start_color="FF9999", end_color="FF9999", fill_type="solid")
 
-# Excel column order (must match template exactly)
-# Columns with empty header in template (Q9, Q10, Q11 group headers) are skipped
-DATA_COLUMNS = [
-    ("A", "#"),
-    ("B", "L_U"),
-    ("C", "Q1"),
-    ("D", "Q2"),
-    ("E", "Q3"),
-    ("F", "Q4"),
-    ("G", "Q5"),
-    ("H", "Q6"),
-    ("I", "Q7"),
-    ("J", "Q8"),
-    ("K", None),      # Q9 group header - blank
-    ("L", "Q9a"),
-    ("M", "Q9b"),
-    ("N", "Q9c"),
-    ("O", "Q9d"),
-    ("P", "Q9e"),
-    ("Q", "Q9f"),
-    ("R", None),      # Q10 group header - blank
-    ("S", "Q10a"),
-    ("T", "Q10b"),
-    ("U", "Q10c"),
-    ("V", "Q10d"),
-    ("W", "Q10e"),
-    ("X", "Q10f"),
-    ("Y", "Q10g"),
-    ("Z", None),      # Q11 group header - blank
-    ("AA", "Q11a"),
-    ("AB", "Q11b"),
-    ("AC", "Q11c"),
-    ("AD", "Q11d"),
-    ("AE", "Q12"),
-    ("AF", "Q13"),
-    ("AG", "Q14"),
-    ("AH", "Q15"),
-    ("AI", "Q16"),
-    ("AJ", "Q17"),
-    ("AK", "source"),
+# Default Deerfield column mapping (fallback)
+DEERFIELD_COLUMNS = [
+    ("A", None),
+    ("B", "#"),
+    ("C", "L_U"),
+    ("D", "Q1"),
+    ("E", "Q2"),
+    ("F", "Q3"),
+    ("G", "Q4"),
+    ("H", "Q5"),
+    ("I", "Q6"),
+    ("J", "Q7"),
+    ("K", "Q8"),
+    ("L", None),      # Q9 group header
+    ("M", "Q9a"),
+    ("N", "Q9b"),
+    ("O", "Q9c"),
+    ("P", "Q9d"),
+    ("Q", "Q9e"),
+    ("R", "Q9f"),
+    ("S", None),      # Q10 group header
+    ("T", "Q10a"),
+    ("U", "Q10b"),
+    ("V", "Q10c"),
+    ("W", "Q10d"),
+    ("X", "Q10e"),
+    ("Y", "Q10f"),
+    ("Z", "Q10g"),
+    ("AA", None),     # Q11 group header
+    ("AB", "Q11a"),
+    ("AC", "Q11b"),
+    ("AD", "Q11c"),
+    ("AE", "Q11d"),
+    ("AF", "Q12"),
+    ("AG", "Q13"),
+    ("AH", "Q14"),
+    ("AI", "Q15"),
+    ("AJ", "Q16"),
+    ("AK", "Q17"),
+    ("AL", "source"),
 ]
 
 
+def load_column_map(survey_type: str) -> list:
+    """Load DATA_COLUMNS from survey config, fall back to Deerfield if not defined."""
+    try:
+        config = importlib.import_module(f"surveys.{survey_type}.config")
+        return config.DATA_COLUMNS
+    except AttributeError:
+        return DEERFIELD_COLUMNS
+
+
 def find_next_empty_row(ws, header_rows: int = 3) -> int:
-    """
-    Find the first empty data row after the header rows.
-    Template has 3 header rows. Data starts at row 4.
-    We append after the last populated row.
-    """
+    """Find first empty data row after header rows."""
     for row in range(header_rows + 1, ws.max_row + 10):
         if ws.cell(row=row, column=2).value is None:
             return row
@@ -70,24 +77,15 @@ def write_results(
     results: list[dict],
     template_path: str,
     output_path: str,
-    start_number: int = None
+    start_number: int = None,
+    survey_type: str = "deerfield"
 ) -> str:
-    """
-    Write extracted survey results into a copy of the Excel template.
-    
-    Args:
-        results: List of flattened survey dicts from extractor.flatten_result()
-        template_path: Path to the master Excel template
-        output_path: Where to save the output file
-        start_number: Override the survey number (if None, reads from survey_id)
-    
-    Returns:
-        Path to the output file
-    """
+    """Write extracted survey results into a copy of the Excel template."""
     wb = openpyxl.load_workbook(template_path)
     ws = wb.active
 
-    # Find where to start writing (first empty data row)
+    data_columns = load_column_map(survey_type)
+
     start_row = find_next_empty_row(ws)
     print(f"Writing to sheet '{ws.title}', starting at row {start_row}")
 
@@ -100,18 +98,16 @@ def write_results(
         if start_number is not None:
             survey_num = start_number + i
         else:
-            # Parse from survey_id e.g. "L-1" → 1
             sid = flat.get("survey_id", "")
             try:
-                survey_num = int(sid.split("-")[1])
+                survey_num = int(sid.split("-")[1]) if sid else row - start_row + 1
             except (IndexError, ValueError):
                 survey_num = row - start_row + 1
 
-        for col_letter, field_key in DATA_COLUMNS:
+        for col_letter, field_key in data_columns:
             cell = ws[f"{col_letter}{row}"]
 
             if field_key is None:
-                # Group header column — leave blank
                 continue
             elif field_key == "#":
                 cell.value = survey_num
@@ -122,7 +118,6 @@ def write_results(
             else:
                 cell.value = flat.get(field_key)
 
-            # Highlight flagged or error cells
             if is_error:
                 cell.fill = copy(ERROR_FILL)
             elif field_key in flagged_keys:
@@ -130,26 +125,8 @@ def write_results(
 
     wb.save(output_path)
     print(f"Saved: {output_path}")
-    print(f"Wrote {len(results)} surveys ({sum(1 for r in results if r.get('_status') == 'ok')} OK, "
+    print(f"Wrote {len(results)} surveys "
+          f"({sum(1 for r in results if r.get('_status') == 'ok')} OK, "
           f"{sum(1 for r in results if r.get('_status') == 'error')} errors, "
           f"{sum(1 for r in results if r.get('_flags'))} flagged)")
     return output_path
-
-
-if __name__ == "__main__":
-    # Quick writer test with dummy data
-    dummy = [
-        {
-            "survey_id": "L-1", "likely_voter": "L", "_status": "ok", "_flags": "",
-            "Q1": 1, "Q2": 1, "Q3": 3, "Q4": 1, "Q5": 1, "Q6": "4,5", "Q7": 2,
-            "Q8": 3,
-            "Q9a": 5, "Q9b": 3, "Q9c": 4, "Q9d": 5, "Q9e": 3, "Q9f": 3,
-            "Q10a": 5, "Q10b": 1, "Q10c": 5, "Q10d": 4, "Q10e": 3, "Q10f": 3, "Q10g": 5,
-            "Q11a": 1, "Q11b": 2, "Q11c": 5, "Q11d": 3,
-            "Q12": 2, "Q13": 3, "Q14": 2, "Q15": 1, "Q16": "1", "Q17": "2",
-            "source": "S"
-        }
-    ]
-    template = "/mnt/user-data/uploads/Deerfield_109_Mail_Survey_Data_Entry_Spreadsheet_Template_Final_11_24_2025_FINAL.xlsx"
-    out = write_results(dummy, template, "/mnt/user-data/outputs/test_output.xlsx")
-    print(f"Test complete: {out}")

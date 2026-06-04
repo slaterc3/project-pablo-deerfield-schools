@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
-# surveybot/run.py
-# Main entry point — all survey types, one script
+# surveybot/run_v2.py
+# Main entry point: process a batch PDF and write results to Excel
 #
 # Usage:
-#   python run.py --pdf surveys.pdf --template template.xlsx --survey-type east_maine
+#   python run_v2.py --pdf surveys.pdf --template template.xlsx --survey-type east_maine
 
 import argparse
 import os
 import sys
 from pathlib import Path
 from datetime import datetime
-import time
-# from tracemalloc import start
 
-from extractor import process_pdf, flatten_result, SUPPORTED_SURVEY_TYPES
+from extractor_v2 import process_pdf, flatten_result
 from writer import write_results
 
 
@@ -23,8 +21,8 @@ def main():
     parser.add_argument("--template",    required=True,  help="Path to Excel template file")
     parser.add_argument("--output",      default=None,   help="Output Excel path (default: auto-named)")
     parser.add_argument("--survey-type", default="deerfield",
-                        choices=SUPPORTED_SURVEY_TYPES,
-                        help=f"Survey format type. Options: {SUPPORTED_SURVEY_TYPES}")
+                        choices=["deerfield", "weld_re1", "east_maine"],
+                        help="Survey format type (default: deerfield)")
     parser.add_argument("--start",       type=int, default=None,
                         help="Override starting survey number")
     args = parser.parse_args()
@@ -35,14 +33,16 @@ def main():
     if not Path(args.template).exists():
         print(f"ERROR: Template not found: {args.template}")
         sys.exit(1)
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ERROR: ANTHROPIC_API_KEY not set. Run: export ANTHROPIC_API_KEY=your_key")
-        sys.exit(1)
 
     if args.output is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         stem = Path(args.pdf).stem
         args.output = str(Path(args.template).parent / f"{stem}_results_{timestamp}.xlsx")
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("ERROR: ANTHROPIC_API_KEY environment variable not set.")
+        print("  Set it with: export ANTHROPIC_API_KEY=your_key_here")
+        sys.exit(1)
 
     print("=" * 60)
     print("SurveyBot - Mail Survey Extractor")
@@ -53,18 +53,11 @@ def main():
     print(f"  Survey type: {args.survey_type}")
     print()
 
-    start = time.time()
     raw_results  = process_pdf(args.pdf, survey_type=args.survey_type)
-    
-    elapsed = time.time() - start
-
-    print(f"  Extraction time: {elapsed:.1f}s ({elapsed/len(raw_results):.1f}s per survey)")
     flat_results = [flatten_result(r) for r in raw_results]
 
     print()
-    # write_results(flat_results, args.template, args.output, start_number=args.start)
-    write_results(flat_results, args.template, args.output, 
-              start_number=args.start, survey_type=args.survey_type)
+    write_results(flat_results, args.template, args.output, start_number=args.start)
 
     ok    = sum(1 for r in flat_results if r.get("_status") == "ok")
     errs  = sum(1 for r in flat_results if r.get("_status") == "error")
