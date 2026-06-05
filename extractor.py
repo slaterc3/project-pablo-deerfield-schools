@@ -13,9 +13,8 @@ import json
 import os
 import importlib
 from models import parse_and_validate
-import time
 
-SUPPORTED_SURVEY_TYPES = ["deerfield", "weld_re1", "east_maine"]
+SUPPORTED_SURVEY_TYPES = ["deerfield", "weld_re1", "east_maine", "troy_30c"]
 
 
 def load_survey(survey_type: str):
@@ -64,7 +63,7 @@ def get_survey_images(doc: fitz.Document, i: int, survey_type: str) -> tuple:
         img3 = get_page_crop(doc, outside, half="full")
         return img1, img2, img3
 
-    elif survey_type == "east_maine":
+    elif survey_type in ("east_maine", "troy_30c"):
         outside = i * 2
         inside  = i * 2 + 1
         img1 = get_page_crop(doc, outside, half="full")
@@ -122,7 +121,10 @@ def flatten_raw(raw_dict: dict) -> tuple[dict, list]:
             continue
         if isinstance(val, dict):
             v = val.get("value")
-            flat[key] = ",".join(str(x) for x in v) if isinstance(v, list) else v
+            # flat[key] = ",".join(str(x) for x in v) if isinstance(v, list) else v
+            val = ",".join(str(x) for x in v) if isinstance(v, list) else v
+            flat[key] = None if val == "" or val == [] else val
+            
             conf = val.get("confidence", "high")
             if conf == "low":
                 flags.append(key)
@@ -155,7 +157,6 @@ def process_pdf(pdf_path: str, survey_type: str = "deerfield", api_key: str = No
     for i in range(num_surveys):
         survey_num = i + 1
         print(f"  Extracting survey {survey_num}/{num_surveys}...", end=" ", flush=True)
-        survey_start = time.time()
 
         try:
             img1, img2, img3 = get_survey_images(doc, i, survey_type)
@@ -205,7 +206,6 @@ def process_pdf(pdf_path: str, survey_type: str = "deerfield", api_key: str = No
 
             print(f"    {json.dumps(flat)}")
             results.append(flat)
-            print(f"    ({time.time() - survey_start:.1f}s)", end=" ")
 
         except Exception as e:
             print(f"ERROR: {e}")
