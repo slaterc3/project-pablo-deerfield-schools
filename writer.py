@@ -56,6 +56,15 @@ DEERFIELD_COLUMNS = [
 ]
 
 
+def load_header_rows(survey_type: str) -> int:
+    """Load HEADER_ROWS from survey config, default to 3."""
+    try:
+        config = importlib.import_module(f"surveys.{survey_type}.config")
+        return getattr(config, "HEADER_ROWS", 3)
+    except Exception:
+        return 3
+
+
 def load_column_map(survey_type: str) -> list:
     """Load DATA_COLUMNS from survey config, fall back to Deerfield if not defined."""
     try:
@@ -85,8 +94,9 @@ def write_results(
     ws = wb.active
 
     data_columns = load_column_map(survey_type)
+    header_rows = load_header_rows(survey_type)
 
-    start_row = find_next_empty_row(ws)
+    start_row = find_next_empty_row(ws, header_rows=header_rows)
     print(f"Writing to sheet '{ws.title}', starting at row {start_row}")
 
     for i, flat in enumerate(results):
