@@ -121,17 +121,22 @@ def flatten_raw(raw_dict: dict) -> tuple[dict, list]:
             continue
         if isinstance(val, dict):
             v = val.get("value")
-            # flat[key] = ",".join(str(x) for x in v) if isinstance(v, list) else v
-            val = ",".join(str(x) for x in v) if isinstance(v, list) else v
-            flat[key] = None if val == "" or val == [] else val
-            
             conf = val.get("confidence", "high")
-            if conf == "low":
-                flags.append(key)
-            elif conf == "medium":
-                flags.append(f"{key}?")
+        elif val is None:
+            v = None
+            conf = "high"
         else:
-            flat[key] = val
+            # bare int returned by model
+            v = val
+            conf = "high"
+        
+        result = ",".join(str(x) for x in v) if isinstance(v, list) else v
+        flat[key] = None if result == "" or result == [] else result
+        
+        if conf == "low":
+            flags.append(key)
+        elif conf == "medium":
+            flags.append(f"{key}?")
     return flat, flags
 
 
@@ -180,9 +185,21 @@ def process_pdf(pdf_path: str, survey_type: str = "deerfield", api_key: str = No
                 flat, flags = flatten_raw(raw_dict)
 
             # Apply no-response defaults
-            for key, default in config.NO_RESPONSE_DEFAULTS.items():
-                if flat.get(key) is None and default is not None:
-                    flat[key] = default
+            # for key, default in config.NO_RESPONSE_DEFAULTS.items():
+            #     if flat.get(key) is None and default is not None:
+            #         flat[key] = default
+            # if survey_type == "troy_30c":
+            #     if flat.get("Q3") and flat["Q3"] > 4:
+            #         flat["Q3"] = 4
+            #         if "Q3" not in flags:
+            #             flags.append("Q3?")
+            # cs 6/9/26 safer version that above:
+            if survey_type == "troy_30c":
+                q3 = flat.get("Q3")
+                if isinstance(q3, int) and q3 > 4:
+                    flat["Q3"] = 4
+                    if "Q3" not in flags and "Q3?" not in flags:
+                        flags.append("Q3?")
 
             # Skip logic: no children → null school question
             if flat.get(children_q) == 2:
