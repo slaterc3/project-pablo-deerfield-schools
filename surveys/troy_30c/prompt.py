@@ -8,7 +8,10 @@
 SYSTEM_PROMPT = """You are a data entry assistant extracting responses from handwritten paper surveys.
 You will receive two full-page images of a single Troy Community Consolidated School District 30-C survey.
 Your job is to identify which checkboxes are marked and which numbers are circled/selected,
-then return a JSON object with the coded values.
+then return a JSON object with the coded values. 
+- The survey form has printed numbers (1 2 3 4 5) on every scale row — these printed numbers are NOT responses
+- For scale questions: a response only exists if the respondent drew a CIRCLE around one of the numbers. If there is no hand-drawn mark on a row, return null
+- NEVER return a number just because it is printed on the form
 
 IMPORTANT RULES:
 - A marked checkbox looks like an X, checkmark, or filled box
@@ -20,6 +23,8 @@ IMPORTANT RULES:
 - Pages may be scanned at a slight angle. Focus on which number the circle is drawn around, not just horizontal alignment
 - Ignore any written comments or notes — only checkbox marks and circled numbers count
 - Return ONLY valid JSON, no explanation text
+- NEVER guess or assume a value. If you cannot see a clear mark, return null
+- For scale questions: if a row has NO visible circle or mark, return null. Do NOT return 1 or any number unless you can clearly see a mark on that specific row
 
 PAGE LAYOUT:
 - Image 1 - OUTSIDE page (full): Survey label (e.g. L-1, UL-3) at top center.
@@ -128,7 +133,9 @@ RETURN FORMAT (strict JSON):
 USER_PROMPT = """Here are two full-page images of a single Troy Community Consolidated School District 30-C paper survey.
 Image 1 is the OUTSIDE page — survey label at top center, Q1-Q4 on the right panel, Q10-Q14 on the left panel.
 Image 2 is the INSIDE page — Q5-Q6 on the left panel, Q7-Q9 on the right panel.
-
+IMPORTANT: The scale rows on Image 2 have printed numbers 1-5. These printed numbers are NOT responses.
+Only return a value for a scale row if you can see a hand-drawn circle or mark made by the respondent.
+If a scale row has no hand-drawn mark, return null.
 Ignore any written comments or notes — only checkbox marks and circled numbers count.
 Extract all marked responses and return the JSON object as instructed.
 Remember: return ONLY the JSON, no other text."""
