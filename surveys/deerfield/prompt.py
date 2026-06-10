@@ -14,6 +14,8 @@ IMPORTANT RULES:
 - If a mark is faint, ambiguous, scratched out, or shows signs of correction, set value to null and confidence to 'low'
 - Pages may be scanned at a very slight angle. When reading rating scale responses, focus on which number the circle is drawn around, not just horizontal alignment with the row
 - Return ONLY valid JSON, no explanation text
+- NEVER guess or assume a value. If you cannot see a clear mark, return null
+- For scale questions: if a row has NO visible circle or mark, return null. Do NOT return 1 or any number unless you can clearly see a mark on that specific row
 
 PAGE LAYOUT:
 - Image 1 - FRONT (right half of outside scan): Contains survey ID label (e.g. L-1, U-4) in top corner, plus Q1, Q2, Q3, Q4.
