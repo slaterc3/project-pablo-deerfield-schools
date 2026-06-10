@@ -14,8 +14,8 @@ import os
 import importlib
 from models import parse_and_validate
 
-SUPPORTED_SURVEY_TYPES = ["deerfield", "weld_re1", "east_maine", "troy_30c"]
-
+SUPPORTED_SURVEY_TYPES = ["deerfield", "weld_re1", "east_maine", "troy_30c", "oswego"]
+# SUPPORTED_SURVEY_TYPES = ["deerfield", "weld_re1", "east_maine", "troy_30c", "oswego"]
 
 def load_survey(survey_type: str):
     """Dynamically load config and prompt from surveys/<survey_type>/."""
