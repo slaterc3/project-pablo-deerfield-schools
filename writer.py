@@ -132,6 +132,9 @@ def write_results(
                 cell.fill = copy(ERROR_FILL)
             elif field_key in flagged_keys:
                 cell.fill = copy(FLAG_FILL)
+            # cs 6/9/26 flag null values with yellow fill
+            elif cell.value is None and field_key not in (None, "#", "L_U", "source"):
+                cell.fill = copy(FLAG_FILL)
 
     wb.save(output_path)
     print(f"Saved: {output_path}")
