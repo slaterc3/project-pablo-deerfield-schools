@@ -62,8 +62,8 @@ def get_survey_images(doc: fitz.Document, i: int, survey_type: str) -> tuple:
         img2 = get_page_crop(doc, inside,  half="right")
         img3 = get_page_crop(doc, outside, half="full")
         return img1, img2, img3
-
-    elif survey_type in ("east_maine", "troy_30c"):
+    # added 'oswego' to the list of supported survey types 6/10/26
+    elif survey_type in ("east_maine", "troy_30c", "oswego"):
         outside = i * 2
         inside  = i * 2 + 1
         img1 = get_page_crop(doc, outside, half="full")
